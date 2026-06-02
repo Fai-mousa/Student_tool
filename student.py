@@ -32,6 +32,7 @@ from train import (  # noqa: E402
     SCALER_PATH,
     COLUMNS_PATH,
 )
+from recommender import get_recommendations  # noqa: E402
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PAGE CONFIG
@@ -210,6 +211,48 @@ html, body, [class*="css"] {
 .fi-bg  { flex:1; background:#f1f5f9; border-radius:100px; height:7px; }
 .fi-bar { height:7px; border-radius:100px; background:var(--teal); }
 .fi-val { width:36px; text-align:right; font-size:.74rem; color:var(--muted); }
+
+/* ── Recommendations ── */
+.rec-section { margin-top: 28px; }
+.rec-header {
+    font-family: 'Sora', sans-serif;
+    font-size: 1.1rem; font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 16px;
+}
+.rec-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.rec-card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: var(--shadow);
+    border-top: 3px solid var(--teal2);
+}
+.rec-card-title {
+    font-family: 'Sora', sans-serif;
+    font-size: .75rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .08em;
+    color: var(--teal); margin-bottom: 10px;
+}
+.rec-item {
+    display: flex; gap: 8px; align-items: flex-start;
+    margin-bottom: 8px; font-size: .82rem;
+    line-height: 1.6; color: #374151;
+}
+.rec-item:last-child { margin-bottom: 0; }
+.rec-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+.rec-card.academic   { border-top-color: #3b82f6; }
+.rec-card.study      { border-top-color: #8b5cf6; }
+.rec-card.lifestyle  { border-top-color: #10b981; }
+.rec-card.motivation { border-top-color: #f59e0b; }
+.rec-card.academic   .rec-card-title { color: #2563eb; }
+.rec-card.study      .rec-card-title { color: #7c3aed; }
+.rec-card.lifestyle  .rec-card-title { color: #059669; }
+.rec-card.motivation .rec-card-title { color: #d97706; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -484,7 +527,7 @@ with col_result:
                     Final Grade: <strong>{g3_predicted:.1f} / 50</strong>
                   </div>
                   <div class="res-sub" style="margin-top:4px;">
-                    Total Score: <strong>{total:.1f} / 75</strong>
+                    Total Score: <strong>{total:.1f} / 100</strong>
                   </div>
                   <div class="res-pill">
                     {shortage} pts needed to pass
@@ -492,21 +535,46 @@ with col_result:
                 </div>
                 """, unsafe_allow_html=True)
 
-            # ── Personalised tips ──────────────────────────────────────
-            tips = []
-            if failures > 0:
-                tips.append("⚠️ Past failures significantly increase risk — seek tutoring support early.")
-            if absences > 10:
-                tips.append("📅 High absences impact performance. Try to attend more consistently.")
-            if studytime <= 1:
-                tips.append("📚 Increasing your study time can meaningfully improve your final grade.")
-            if health <= 2:
-                tips.append("❤️ Your health affects academic performance — consider speaking to a counsellor.")
-            if tips and not passed:
-                st.markdown(
-                    '<div class="tip">' + "<br>".join(tips) + "</div>",
-                    unsafe_allow_html=True
-                )
+            # ── AI-Powered Personalised Recommendations ────────────────
+            st.markdown('<div class="rec-section">', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="rec-header">🤖 Your Personalised Recommendations</div>',
+                unsafe_allow_html=True,
+            )
+
+            recs = get_recommendations(raw_input, g3_predicted, total, passed)
+
+            if recs:
+                CATEGORIES = [
+                    ("academic",   "📖 Academic",      "academic"),
+                    ("study",      "⏰ Study Habits",   "study"),
+                    ("lifestyle",  "🌿 Lifestyle",      "lifestyle"),
+                    ("motivation", "🌟 Motivation",     "motivation"),
+                ]
+
+                # Build the 2x2 card grid
+                html_cards = '<div class="rec-grid">'
+                for key, label, css_class in CATEGORIES:
+                    items = recs.get(key, [])
+                    items_html = "".join(
+                        f'<div class="rec-item">'
+                        f'<span class="rec-icon">{item.get("icon","💡")}</span>'
+                        f'<span>{item.get("tip","")}</span>'
+                        f'</div>'
+                        for item in items
+                    )
+                    html_cards += (
+                        f'<div class="rec-card {css_class}">'
+                        f'<div class="rec-card-title">{label}</div>'
+                        f'{items_html}'
+                        f'</div>'
+                    )
+                html_cards += '</div>'
+                st.markdown(html_cards, unsafe_allow_html=True)
+            else:
+                st.info("Could not generate recommendations. Please try again.")
+
+            st.markdown('</div>', unsafe_allow_html=True)
 
     else:
         # ── Placeholder ────────────────────────────────────────────────
