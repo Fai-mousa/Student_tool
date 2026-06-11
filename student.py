@@ -513,7 +513,7 @@ with col_result:
                     Final Grade: <strong>{g3_predicted:.1f} / 50</strong>
                   </div>
                   <div class="res-sub" style="margin-top:4px;">
-                    Total Score: <strong>{total:.1f} / 75</strong>
+                    Total Score: <strong>{total:.1f} / 100</strong>
                   </div>
                   <div class="res-pill">Total ≥ {PASS_THRESHOLD} ✓</div>
                 </div>
